@@ -8,10 +8,22 @@
 import SwiftUI
 
 struct ContentView: View {
+    // 配置支持小数的 NumberFormatter
+    private let decimalFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
+        formatter.allowsFloats = true
+        formatter.minimum = 0
+        return formatter
+    }()
+    
     @State private var studyTime: Int = 0
     @State private var timerInterval: Timer? = nil
     @State private var isRunning: Bool = false
     @State private var ratio: Double = 1.0
+    @State private var ratio2: Double = 1.0
     @State private var increment: Bool = true
 
     var body: some View {
@@ -23,6 +35,7 @@ struct ContentView: View {
             Text(formatTime(seconds: studyTime))
                 .font(.system(size: 48))
                 .padding()
+                .foregroundColor(studyTime < 0 ? .red : .primary)
                 .accessibility(identifier: "timerDisplay")
 
             HStack {
@@ -60,12 +73,18 @@ struct ContentView: View {
             }
 
             HStack {
-                Text("Enter Study/Fun Ratio:")
-                TextField("Ratio", value: $ratio, formatter: NumberFormatter())
+                Text("Enter Study : Fun Ratio:")
+                TextField("Ratio", value: $ratio, formatter: decimalFormatter)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .frame(width: 100)
+                    .frame(width: 50)
                     .padding()
                     .accessibility(identifier: "ratioInput")
+                Text(":")
+                TextField("Ratio2", value: $ratio2, formatter: decimalFormatter)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .frame(width: 50)
+                    .padding()
+                    .accessibility(identifier: "ratioInput2")
             }
             .padding()
         }
@@ -73,9 +92,18 @@ struct ContentView: View {
     }
 
     func formatTime(seconds: Int) -> String {
+        var seconds = seconds
+        var lessThanZero = false
+        if seconds < 0 {
+            lessThanZero = true
+            seconds = -seconds
+        }
         let hrs = seconds / 3600
         let mins = (seconds % 3600) / 60
         let secs = seconds % 60
+        if lessThanZero {
+            return String(format: "-%02d:%02d:%02d", hrs, mins, secs)
+        }
         return String(format: "%02d:%02d:%02d", hrs, mins, secs)
     }
 
@@ -86,13 +114,13 @@ struct ContentView: View {
     func startTimer() {
         guard !isRunning else { return }
         isRunning = true
-        let intervalTime = increment ? 1.0 / ratio : 1.0 * ratio
+        let intervalTime = increment ? 1.0 * (ratio / ratio2) : 1.0
 
         timerInterval = Timer.scheduledTimer(withTimeInterval: intervalTime, repeats: true) { _ in
             if increment {
                 studyTime += 1
             } else {
-                studyTime = max(0, studyTime - 1)
+                studyTime = studyTime - 1
             }
             updateTimer()
         }
